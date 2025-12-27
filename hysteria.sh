@@ -537,24 +537,24 @@ changeport(){
 }
 
 changepasswd(){
-    # 使用更精确的方式获取旧密码
-    oldpasswd=$(cat /etc/hysteria/config.yaml 2>/dev/null | grep -E "^\s*password:" | awk '{print $2}')
+    # 获取旧密码的方式：直接使用sed提取password字段的值
+    oldpasswd=$(cat /etc/hysteria/config.yaml 2>/dev/null | sed -n '/password:/{s/.*password: //;p}')
 
     read -p "设置 Hysteria 2 密码（回车跳过为随机字符）：" passwd
     [[ -z $passwd ]] && passwd=$(date +%s%N | md5sum | cut -c 1-8)
 
-    # 更新服务端配置
-    sed -i "s/^\s*password: .*/password: $passwd/" /etc/hysteria/config.yaml
+    # 更新服务端配置 - 使用精确匹配替换整个password行
+    sed -i "/password:/c\  password: $passwd" /etc/hysteria/config.yaml
     
     # 更新客户端配置文件
-    sed -i "s/^\s*auth: .*/auth: $passwd/" /root/hy/hy-client.yaml
-    sed -i "s/\"auth\": \"[^"]*\"/\"auth\": \"$passwd\"/" /root/hy/hy-client.json
-    sed -i "s/^\s*password: .*/password: $passwd/" /root/hy/clash-meta.yaml
+    sed -i "/auth:/c\auth: $passwd" /root/hy/hy-client.yaml
+    sed -i "s#\"auth\": \"[^"]*\"#\"auth\": \"$passwd\"#g" /root/hy/hy-client.json
+    sed -i "/password:/c\    password: $passwd" /root/hy/clash-meta.yaml
     
     # 更新分享链接
     ip=$(curl -s4m8 ip.gs -k) || ip=$(curl -s6m8 ip.gs -k)
     port=$(cat /etc/hysteria/config.yaml 2>/dev/null | grep "listen:" | awk '{print $2}' | sed 's/://')
-    hy_domain=$(grep -oP '(?<=sni: )[^ ]+' /root/hy/hy-client.yaml)
+    hy_domain=$(cat /root/hy/hy-client.yaml 2>/dev/null | sed -n '/sni:/{s/.*sni: //;p}')
     
     # 给 IPv6 地址加中括号
     if [[ -n $(echo $ip | grep ":") ]]; then
@@ -653,8 +653,7 @@ update_core(){
     rm -f install_server.sh
 }
 
-# 定义主菜单函数
-function menu {
+menu() {
     clear
     echo "#############################################################"
     echo -e "#                  ${RED}Hysteria 2 一键安装脚本${PLAIN}                  #"
@@ -678,18 +677,16 @@ function menu {
     echo " -------------"
     echo -e " ${GREEN}0.${PLAIN} 退出脚本"
     echo ""
-    read -rp "请输入选项 [0-6]: " menuInput
-    case "$menuInput" in
-        "1") insthysteria ;;
-        "2") unsthysteria ;;
-        "3") hysteriaswitch ;;
-        "4") changeconf ;;
-        "5") showconf ;;
-        "6") update_core ;;
-        "0") exit 0 ;;
-        *) exit 1 ;;
+    read -rp "请输入选项 [0-5]: " menuInput
+    case $menuInput in
+        1 ) insthysteria ;;
+        2 ) unsthysteria ;;
+        3 ) hysteriaswitch ;;
+        4 ) changeconf ;;
+        5 ) showconf ;;
+        6 ) update_core ;;
+        * ) exit 1 ;;
     esac
 }
 
-# 调用主菜单
 menu
