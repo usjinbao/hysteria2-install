@@ -537,24 +537,23 @@ changeport(){
 }
 
 changepasswd(){
-    # 获取旧密码的方式：直接使用sed提取password字段的值
-    oldpasswd=$(cat /etc/hysteria/config.yaml 2>/dev/null | sed -n '/password:/{s/.*password: //;p}')
+    oldpasswd=$(cat /etc/hysteria/config.yaml 2>/dev/null | grep -A2 "auth:" | grep "password:" | awk '{print $2}')
 
     read -p "设置 Hysteria 2 密码（回车跳过为随机字符）：" passwd
     [[ -z $passwd ]] && passwd=$(date +%s%N | md5sum | cut -c 1-8)
 
-    # 更新服务端配置 - 使用精确匹配替换整个password行
-    sed -i "/password:/c\  password: $passwd" /etc/hysteria/config.yaml
+    # 更新服务端配置
+    sed -i "s#password: $oldpasswd#password: $passwd#g" /etc/hysteria/config.yaml
     
     # 更新客户端配置文件
-    sed -i "/auth:/c\auth: $passwd" /root/hy/hy-client.yaml
-    sed -i "s#\"auth\": \"[^"]*\"#\"auth\": \"$passwd\"#g" /root/hy/hy-client.json
-    sed -i "/password:/c\    password: $passwd" /root/hy/clash-meta.yaml
+    sed -i "s#auth: $oldpasswd#auth: $passwd#g" /root/hy/hy-client.yaml
+    sed -i "s#\"auth\": \"$oldpasswd\"#\"auth\": \"$passwd\"#g" /root/hy/hy-client.json
+    sed -i "s#password: $oldpasswd#password: $passwd#g" /root/hy/clash-meta.yaml
     
     # 更新分享链接
     ip=$(curl -s4m8 ip.gs -k) || ip=$(curl -s6m8 ip.gs -k)
     port=$(cat /etc/hysteria/config.yaml 2>/dev/null | grep "listen:" | awk '{print $2}' | sed 's/://')
-    hy_domain=$(cat /root/hy/hy-client.yaml 2>/dev/null | sed -n '/sni:/{s/.*sni: //;p}')
+    hy_domain=$(grep -oP '(?<=sni: )[^\s]+' /root/hy/hy-client.yaml)
     
     # 给 IPv6 地址加中括号
     if [[ -n $(echo $ip | grep ":") ]]; then
