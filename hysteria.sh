@@ -501,9 +501,15 @@ changeport(){
     sed -i "2s#$oldport#$port#g" /root/hy/hy-client.json
     sed -i "4s#$oldport#$port#g" /root/hy/clash-meta.yaml
     
+    # 获取当前节点名称
+    current_name=$(cat /root/hy/url.txt | grep -o "#.*$" | sed 's/^#//')
+    if [[ -z $current_name ]]; then
+        current_name="Misaka-Hysteria2"
+    fi
+    
     # 更新分享链接
     ip=$(curl -s4m8 ip.gs -k) || ip=$(curl -s6m8 ip.gs -k)
-    auth_pwd=$(cat /etc/hysteria/config.yaml 2>/dev/null | sed -n 15p | awk '{print $2}')
+    auth_pwd=$(cat /etc/hysteria/config.yaml 2>/dev/null | grep -A2 "auth:" | grep "password:" | awk '{print $2}')
     hy_domain=$(grep -oP '(?<=sni: )[^\s]+' /root/hy/hy-client.yaml)
     
     # 给 IPv6 地址加中括号
@@ -524,9 +530,9 @@ changeport(){
     fi
     
     # 更新分享链接
-    url="hysteria2://$auth_pwd@$last_ip:$last_port/?insecure=1&sni=$hy_domain#Misaka-Hysteria2"
+    url="hysteria2://$auth_pwd@$last_ip:$last_port/?insecure=1&sni=$hy_domain#$current_name"
     echo $url > /root/hy/url.txt
-    nohopurl="hysteria2://$auth_pwd@$last_ip:$port/?insecure=1&sni=$hy_domain#Misaka-Hysteria2"
+    nohopurl="hysteria2://$auth_pwd@$last_ip:$port/?insecure=1&sni=$hy_domain#$current_name"
     echo $nohopurl > /root/hy/url-nohop.txt
 
     stophysteria && starthysteria
@@ -549,6 +555,12 @@ changepasswd(){
     sed -i "s#auth: $oldpasswd#auth: $passwd#g" /root/hy/hy-client.yaml
     sed -i "s#\"auth\": \"$oldpasswd\"#\"auth\": \"$passwd\"#g" /root/hy/hy-client.json
     sed -i "s#password: $oldpasswd#password: $passwd#g" /root/hy/clash-meta.yaml
+    
+    # 获取当前节点名称
+    current_name=$(cat /root/hy/url.txt | grep -o "#.*$" | sed 's/^#//')
+    if [[ -z $current_name ]]; then
+        current_name="Misaka-Hysteria2"
+    fi
     
     # 更新分享链接
     ip=$(curl -s4m8 ip.gs -k) || ip=$(curl -s6m8 ip.gs -k)
@@ -573,9 +585,9 @@ changepasswd(){
     fi
     
     # 更新分享链接
-    url="hysteria2://$passwd@$last_ip:$last_port/?insecure=1&sni=$hy_domain#Misaka-Hysteria2"
+    url="hysteria2://$passwd@$last_ip:$last_port/?insecure=1&sni=$hy_domain#$current_name"
     echo $url > /root/hy/url.txt
-    nohopurl="hysteria2://$passwd@$last_ip:$port/?insecure=1&sni=$hy_domain#Misaka-Hysteria2"
+    nohopurl="hysteria2://$passwd@$last_ip:$port/?insecure=1&sni=$hy_domain#$current_name"
     echo $nohopurl > /root/hy/url-nohop.txt
 
     stophysteria && starthysteria
