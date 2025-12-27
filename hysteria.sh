@@ -59,7 +59,7 @@ inst_cert(){
     echo -e " ${GREEN}2.${PLAIN} Acme 脚本自动申请"
     echo -e " ${GREEN}3.${PLAIN} 自定义证书路径"
     echo ""
-    read -rp "请输入选项 [1-3]: " certInput
+    read -rep "请输入选项 [1-3]: " certInput
     if [[ $certInput == 2 ]]; then
         cert_path="/root/cert.crt"
         key_path="/root/private.key"
@@ -86,7 +86,7 @@ inst_cert(){
                 realip
             fi
             
-            read -p "请输入需要申请证书的域名：" domain
+            read -ep "请输入需要申请证书的域名：" domain
             [[ -z $domain ]] && red "未输入域名，无法执行操作！" && exit 1
             green "已输入的域名：$domain" && sleep 1
             domainIP=$(dig @8.8.8.8 +time=2 +short "$domain" 2>/dev/null)
@@ -98,7 +98,7 @@ inst_cert(){
                 yellow "是否尝试强行匹配？"
                 green "1. 是，将使用强行匹配"
                 green "2. 否，退出脚本"
-                read -p "请输入选项 [1-2]：" ipChoice
+                read -ep "请输入选项 [1-2]：" ipChoice
                 if [[ $ipChoice == 1 ]]; then
                     yellow "将尝试强行匹配以申请域名证书"
                 else
@@ -146,11 +146,11 @@ inst_cert(){
             fi
         fi
     elif [[ $certInput == 3 ]]; then
-        read -p "请输入公钥文件 crt 的路径：" cert_path
+        read -ep "请输入公钥文件 crt 的路径：" cert_path
         yellow "公钥文件 crt 的路径：$cert_path "
-        read -p "请输入密钥文件 key 的路径：" key_path
+        read -ep "请输入密钥文件 key 的路径：" key_path
         yellow "密钥文件 key 的路径：$key_path "
-        read -p "请输入证书的域名：" domain
+        read -ep "请输入证书的域名：" domain
         yellow "证书域名：$domain"
         hy_domain=$domain
 
@@ -173,12 +173,12 @@ inst_cert(){
 inst_port(){
     iptables -t nat -F PREROUTING >/dev/null 2>&1
 
-    read -p "设置 Hysteria 2 端口 [1-65535]（回车则随机分配端口）：" port
+    read -ep "设置 Hysteria 2 端口 [1-65535]（回车则随机分配端口）：" port
     [[ -z $port ]] && port=$(shuf -i 2000-65535 -n 1)
     until [[ -z $(ss -tunlp | grep -w udp | awk '{print $5}' | sed 's/.*://g' | grep -w "$port") ]]; do
         if [[ -n $(ss -tunlp | grep -w udp | awk '{print $5}' | sed 's/.*://g' | grep -w "$port") ]]; then
             echo -e "${RED} $port ${PLAIN} 端口已经被其他程序占用，请更换端口重试！"
-            read -p "设置 Hysteria 2 端口 [1-65535]（回车则随机分配端口）：" port
+            read -ep "设置 Hysteria 2 端口 [1-65535]（回车则随机分配端口）：" port
             [[ -z $port ]] && port=$(shuf -i 2000-65535 -n 1)
         fi
     done
@@ -193,22 +193,22 @@ inst_jump(){
     echo -e " ${GREEN}1.${PLAIN} 单端口 ${YELLOW}（默认）${PLAIN}"
     echo -e " ${GREEN}2.${PLAIN} 端口跳跃"
     echo ""
-    read -rp "请输入选项 [1-2]: " jumpInput
+    read -rep "请输入选项 [1-2]: " jumpInput
     if [[ $jumpInput == 2 ]]; then
-        read -p "设置范围端口的起始端口 (建议10000-65535之间，默认10000)：" firstport
+        read -ep "设置范围端口的起始端口 (建议10000-65535之间，默认10000)：" firstport
         [[ -z $firstport ]] && firstport=10000
         
-        read -p "设置一个范围端口的末尾端口 (建议10000-65535之间，默认65535)：" endport
+        read -ep "设置一个范围端口的末尾端口 (建议10000-65535之间，默认65535)：" endport
         [[ -z $endport ]] && endport=65535
         
         # 验证端口范围有效性
         if [[ $firstport -ge $endport ]]; then
             until [[ $firstport -le $endport ]]; do
                 red "你设置的起始端口必须小于末尾端口，请重新输入"
-                read -p "设置范围端口的起始端口 (建议10000-65535之间，默认10000)：" firstport
+                read -ep "设置范围端口的起始端口 (建议10000-65535之间，默认10000)：" firstport
                 [[ -z $firstport ]] && firstport=10000
                 
-                read -p "设置一个范围端口的末尾端口 (建议10000-65535之间，默认65535)：" endport
+                read -ep "设置一个范围端口的末尾端口 (建议10000-65535之间，默认65535)：" endport
                 [[ -z $endport ]] && endport=65535
             done
         fi
@@ -216,10 +216,10 @@ inst_jump(){
         # 验证端口范围是否在有效范围内
         if [[ $firstport -lt 1 || $firstport -gt 65535 || $endport -lt 1 || $endport -gt 65535 ]]; then
             red "端口范围必须在1-65535之间，请重新输入"
-            read -p "设置范围端口的起始端口 (建议10000-65535之间，默认10000)：" firstport
+            read -ep "设置范围端口的起始端口 (建议10000-65535之间，默认10000)：" firstport
             [[ -z $firstport ]] && firstport=10000
             
-            read -p "设置一个范围端口的末尾端口 (建议10000-65535之间，默认65535)：" endport
+            read -ep "设置一个范围端口的末尾端口 (建议10000-65535之间，默认65535)：" endport
             [[ -z $endport ]] && endport=65535
             # 重新验证端口范围
             if [[ $firstport -ge $endport ]]; then
@@ -248,13 +248,13 @@ inst_jump(){
 }
 
 inst_pwd(){
-    read -p "设置 Hysteria 2 密码（回车跳过为随机字符）：" auth_pwd
+    read -ep "设置 Hysteria 2 密码（回车跳过为随机字符）：" auth_pwd
     [[ -z $auth_pwd ]] && auth_pwd=$(date +%s%N | md5sum | cut -c 1-8)
     yellow "使用在 Hysteria 2 节点的密码为：$auth_pwd"
 }
 
 inst_site(){
-    read -rp "请输入 Hysteria 2 的伪装网站地址 （去除https://） [回车世嘉maimai日本网站]：" proxysite
+    read -rep "请输入 Hysteria 2 的伪装网站地址 （去除https://） [回车世嘉maimai日本网站]：" proxysite
     [[ -z $proxysite ]] && proxysite="maimai.sega.jp"
     yellow "使用在 Hysteria 2 节点的伪装网站为：$proxysite"
 }
@@ -470,7 +470,7 @@ hysteriaswitch(){
     echo -e " ${GREEN}2.${PLAIN} 关闭 Hysteria 2"
     echo -e " ${GREEN}3.${PLAIN} 重启 Hysteria 2"
     echo ""
-    read -rp "请输入选项 [0-3]: " switchInput
+    read -rep "请输入选项 [0-3]: " switchInput
     case $switchInput in
         1 ) starthysteria ;;
         2 ) stophysteria ;;
@@ -482,13 +482,13 @@ hysteriaswitch(){
 changeport(){
     oldport=$(cat /etc/hysteria/config.yaml 2>/dev/null | sed -n 1p | awk '{print $2}' | awk -F ":" '{print $2}')
     
-    read -p "设置 Hysteria 2 端口[1-65535]（回车则随机分配端口）：" port
+    read -ep "设置 Hysteria 2 端口[1-65535]（回车则随机分配端口）：" port
     [[ -z $port ]] && port=$(shuf -i 2000-65535 -n 1)
 
     until [[ -z $(ss -tunlp | grep -w udp | awk '{print $5}' | sed 's/.*://g' | grep -w "$port") ]]; do
         if [[ -n $(ss -tunlp | grep -w udp | awk '{print $5}' | sed 's/.*://g' | grep -w "$port") ]]; then
             echo -e "${RED} $port ${PLAIN} 端口已经被其他程序占用，请更换端口重试！"
-            read -p "设置 Hysteria 2 端口 [1-65535]（回车则随机分配端口）：" port
+            read -ep "设置 Hysteria 2 端口 [1-65535]（回车则随机分配端口）：" port
             [[ -z $port ]] && port=$(shuf -i 2000-65535 -n 1)
         fi
     done
@@ -545,7 +545,7 @@ changeport(){
 changepasswd(){
     oldpasswd=$(cat /etc/hysteria/config.yaml 2>/dev/null | grep -A2 "auth:" | grep "password:" | awk '{print $2}')
 
-    read -p "设置 Hysteria 2 密码（回车跳过为随机字符）：" passwd
+    read -ep "设置 Hysteria 2 密码（回车跳过为随机字符）：" passwd
     [[ -z $passwd ]] && passwd=$(date +%s%N | md5sum | cut -c 1-8)
 
     # 更新服务端配置
@@ -635,7 +635,7 @@ changeconf(){
     echo -e " ${GREEN}3.${PLAIN} 修改证书类型"
     echo -e " ${GREEN}4.${PLAIN} 修改伪装网站"
     echo ""
-    read -p " 请选择操作 [1-4]：" confAnswer
+    read -ep " 请选择操作 [1-4]：" confAnswer
     case $confAnswer in
         1 ) changeport ;;
         2 ) changepasswd ;;
@@ -670,7 +670,7 @@ change_name() {
     
     echo -e "${YELLOW}当前节点名称: ${GREEN}$current_name${PLAIN}"
     echo ""
-    read -p "请输入新的节点名称（支持中文）：" new_name
+    read -ep "请输入新的节点名称（支持中文）：" new_name
     
     # 如果用户输入为空，使用默认名称
     [[ -z $new_name ]] && new_name="Misaka-Hysteria2"
@@ -708,7 +708,7 @@ menu() {
     echo " -------------"
     echo -e " ${GREEN}0.${PLAIN} 退出脚本"
     echo ""
-    read -rp "请输入选项 [0-7]: " menuInput
+    read -rep "请输入选项 [0-7]: " menuInput
     case $menuInput in
         1 ) insthysteria ;;
         2 ) unsthysteria ;;
