@@ -653,7 +653,8 @@ update_core(){
     rm -f install_server.sh
 }
 
-menu() {
+# 定义主菜单函数
+function menu {
     clear
     echo "#############################################################"
     echo -e "#                  ${RED}Hysteria 2 一键安装脚本${PLAIN}                  #"
@@ -677,16 +678,18 @@ menu() {
     echo " -------------"
     echo -e " ${GREEN}0.${PLAIN} 退出脚本"
     echo ""
-    read -rp "请输入选项 [0-5]: " menuInput
-    case $menuInput in
-        1 ) insthysteria ;;
-        2 ) unsthysteria ;;
-        3 ) hysteriaswitch ;;
-        4 ) changeconf ;;
-        5 ) showconf ;;
-        6 ) update_core ;;
-        * ) exit 1 ;;
+    read -rp "请输入选项 [0-6]: " menuInput
+    case "$menuInput" in
+        "1") insthysteria ;;
+        "2") unsthysteria ;;
+        "3") hysteriaswitch ;;
+        "4") changeconf ;;
+        "5") showconf ;;
+        "6") update_core ;;
+        "0") exit 0 ;;
+        *) exit 1 ;;
     esac
 }
 
+# 调用主菜单
 menu
