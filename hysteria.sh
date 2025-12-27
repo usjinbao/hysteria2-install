@@ -231,13 +231,13 @@ inst_jump(){
         
         # 应用iptables规则并检查是否成功
         if iptables -t nat -A PREROUTING -p udp --dport $firstport:$endport -j DNAT --to-destination :$port; then
-            green "成功添加IPv4端口转发规则"
+            green "成功添加IPv4端口转发规则：将UDP端口 $firstport-$endport 转发到 $port"
         else
             red "添加IPv4端口转发规则失败"
         fi
         
         if ip6tables -t nat -A PREROUTING -p udp --dport $firstport:$endport -j DNAT --to-destination :$port; then
-            green "成功添加IPv6端口转发规则"
+            green "成功添加IPv6端口转发规则：将UDP端口 $firstport-$endport 转发到 $port"
         else
             yellow "添加IPv6端口转发规则失败，可能是因为系统不支持IPv6"
         fi
@@ -493,31 +493,95 @@ changeport(){
         fi
     done
 
+    # 更新服务端配置
     sed -i "1s#$oldport#$port#g" /etc/hysteria/config.yaml
+    
+    # 更新客户端配置文件
     sed -i "1s#$oldport#$port#g" /root/hy/hy-client.yaml
     sed -i "2s#$oldport#$port#g" /root/hy/hy-client.json
+    sed -i "4s#$oldport#$port#g" /root/hy/clash-meta.yaml
+    
+    # 更新分享链接
+    ip=$(curl -s4m8 ip.gs -k) || ip=$(curl -s6m8 ip.gs -k)
+    auth_pwd=$(cat /etc/hysteria/config.yaml 2>/dev/null | sed -n 15p | awk '{print $2}')
+    hy_domain=$(grep -oP '(?<=sni: )[^\s]+' /root/hy/hy-client.yaml)
+    
+    # 给 IPv6 地址加中括号
+    if [[ -n $(echo $ip | grep ":") ]]; then
+        last_ip="[$ip]"
+    else
+        last_ip=$ip
+    fi
+    
+    # 检查是否存在端口跳跃配置
+    firstport=$(grep -oP '(?<=,)[0-9]+(?=-)' /root/hy/hy-client.yaml 2>/dev/null || echo "")
+    endport=$(grep -oP '(?<=-)[0-9]+$' /root/hy/hy-client.yaml 2>/dev/null || echo "")
+    
+    if [[ -n $firstport && -n $endport ]]; then
+        last_port="$port,$firstport-$endport"
+    else
+        last_port=$port
+    fi
+    
+    # 更新分享链接
+    url="hysteria2://$auth_pwd@$last_ip:$last_port/?insecure=1&sni=$hy_domain#Misaka-Hysteria2"
+    echo $url > /root/hy/url.txt
+    nohopurl="hysteria2://$auth_pwd@$last_ip:$port/?insecure=1&sni=$hy_domain#Misaka-Hysteria2"
+    echo $nohopurl > /root/hy/url-nohop.txt
 
     stophysteria && starthysteria
 
     green "Hysteria 2 端口已成功修改为：$port"
-    yellow "请手动更新客户端配置文件以使用节点"
+    yellow "所有客户端配置文件已自动更新"
     showconf
 }
 
 changepasswd(){
-    oldpasswd=$(cat /etc/hysteria/config.yaml 2>/dev/null | sed -n 15p | awk '{print $2}')
+    oldpasswd=$(cat /etc/hysteria/config.yaml 2>/dev/null | grep -A1 "auth:" | grep "password:" | awk '{print $2}')
 
     read -p "设置 Hysteria 2 密码（回车跳过为随机字符）：" passwd
     [[ -z $passwd ]] && passwd=$(date +%s%N | md5sum | cut -c 1-8)
 
-    sed -i "1s#$oldpasswd#$passwd#g" /etc/hysteria/config.yaml
-    sed -i "1s#$oldpasswd#$passwd#g" /root/hy/hy-client.yaml
-    sed -i "3s#$oldpasswd#$passwd#g" /root/hy/hy-client.json
+    # 更新服务端配置
+    sed -i "s#password: $oldpasswd#password: $passwd#g" /etc/hysteria/config.yaml
+    
+    # 更新客户端配置文件
+    sed -i "s#auth: $oldpasswd#auth: $passwd#g" /root/hy/hy-client.yaml
+    sed -i "s#\"auth\": \"$oldpasswd\"#\"auth\": \"$passwd\"#g" /root/hy/hy-client.json
+    sed -i "s#password: $oldpasswd#password: $passwd#g" /root/hy/clash-meta.yaml
+    
+    # 更新分享链接
+    ip=$(curl -s4m8 ip.gs -k) || ip=$(curl -s6m8 ip.gs -k)
+    port=$(cat /etc/hysteria/config.yaml 2>/dev/null | grep "listen:" | awk '{print $2}' | sed 's/://')
+    hy_domain=$(grep -oP '(?<=sni: )[^s]+' /root/hy/hy-client.yaml)
+    
+    # 给 IPv6 地址加中括号
+    if [[ -n $(echo $ip | grep ":") ]]; then
+        last_ip="[$ip]"
+    else
+        last_ip=$ip
+    fi
+    
+    # 检查是否存在端口跳跃配置
+    firstport=$(grep -oP '(?<=,)[0-9]+(?=-)' /root/hy/hy-client.yaml 2>/dev/null || echo "")
+    endport=$(grep -oP '(?<=-)[0-9]+$' /root/hy/hy-client.yaml 2>/dev/null || echo "")
+    
+    if [[ -n $firstport && -n $endport ]]; then
+        last_port="$port,$firstport-$endport"
+    else
+        last_port=$port
+    fi
+    
+    # 更新分享链接
+    url="hysteria2://$passwd@$last_ip:$last_port/?insecure=1&sni=$hy_domain#Misaka-Hysteria2"
+    echo $url > /root/hy/url.txt
+    nohopurl="hysteria2://$passwd@$last_ip:$port/?insecure=1&sni=$hy_domain#Misaka-Hysteria2"
+    echo $nohopurl > /root/hy/url-nohop.txt
 
     stophysteria && starthysteria
 
     green "Hysteria 2 节点密码已成功修改为：$passwd"
-    yellow "请手动更新客户端配置文件以使用节点"
+    yellow "所有客户端配置文件已自动更新"
     showconf
 }
 
