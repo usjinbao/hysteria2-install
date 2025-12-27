@@ -652,6 +652,25 @@ update_core(){
     rm -f install_server.sh
 }
 
+change_name() {
+    # 获取当前节点名称
+    current_name=$(cat /root/hy/url.txt | grep -o "#.*$" | sed 's/^#//')
+    
+    echo -e "${YELLOW}当前节点名称: ${GREEN}$current_name${PLAIN}"
+    echo ""
+    read -p "请输入新的节点名称（支持中文）：" new_name
+    
+    # 如果用户输入为空，使用默认名称
+    [[ -z $new_name ]] && new_name="Misaka-Hysteria2"
+    
+    # 更新分享链接
+    sed -i "s|#.*$|#$new_name|g" /root/hy/url.txt
+    sed -i "s|#.*$|#$new_name|g" /root/hy/url-nohop.txt
+    
+    green "节点名称已成功修改为：$new_name"
+    showconf
+}
+
 menu() {
     clear
     echo "#############################################################"
@@ -671,19 +690,21 @@ menu() {
     echo -e " ${GREEN}3.${PLAIN} 关闭、开启、重启 Hysteria 2"
     echo -e " ${GREEN}4.${PLAIN} 修改 Hysteria 2 配置"
     echo -e " ${GREEN}5.${PLAIN} 显示 Hysteria 2 配置文件"
+    echo -e " ${GREEN}6.${PLAIN} 修改节点名称"
     echo " -------------"
-    echo -e " ${GREEN}6.${PLAIN} 更新 Hysteria 2 内核"
+    echo -e " ${GREEN}7.${PLAIN} 更新 Hysteria 2 内核"
     echo " -------------"
     echo -e " ${GREEN}0.${PLAIN} 退出脚本"
     echo ""
-    read -rp "请输入选项 [0-5]: " menuInput
+    read -rp "请输入选项 [0-7]: " menuInput
     case $menuInput in
         1 ) insthysteria ;;
         2 ) unsthysteria ;;
         3 ) hysteriaswitch ;;
         4 ) changeconf ;;
         5 ) showconf ;;
-        6 ) update_core ;;
+        6 ) change_name ;;
+        7 ) update_core ;;
         * ) exit 1 ;;
     esac
 }
